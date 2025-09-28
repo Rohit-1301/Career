@@ -1,0 +1,10 @@
+streamlit
+firebase-admin
+pyrebase4
+langchain
+# langchain-community
+langchain-google-genai
+google-cloud-storage
+google-generativeai
+python-dotenv
+requests==2.31.0  # Pyrebase expects requests.packages vendored urllib3
