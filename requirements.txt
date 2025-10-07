@@ -8,3 +8,7 @@ google-cloud-storage
 google-generativeai
 python-dotenv
 requests==2.31.0  # Pyrebase expects requests.packages vendored urllib3
+scikit-learn
+pandas
+joblib
+plotly
