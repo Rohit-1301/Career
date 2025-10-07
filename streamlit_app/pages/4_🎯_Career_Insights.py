@@ -107,18 +107,47 @@ user_profile = {
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(["🎯 Recommendations", "📊 Market Insights", "📈 Career Gap Analysis", "🤖 AI Chat"])
 
+# Show a quick preview of the current profile
+with st.expander("📋 Your Profile Summary", expanded=False):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Experience", f"{experience_years} years")
+        st.metric("Skills Count", len(selected_skills))
+    with col2:
+        st.metric("Salary Target", f"${salary_expectation:,}")
+        st.metric("Growth Focus", growth_preference)
+    with col3:
+        st.write("**Top Skills:**")
+        for skill in selected_skills[:3]:
+            st.markdown(f"• {skill}")
+        if len(selected_skills) > 3:
+            st.markdown(f"• +{len(selected_skills) - 3} more")
+
 with tab1:
     st.header("Your Personalized Career Recommendations")
     
-    if st.button("🔮 Generate Recommendations", type="primary"):
+    # Add auto-generate option
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        if st.button("🔮 Generate Recommendations", type="primary"):
+            generate_recs = True
+        else:
+            generate_recs = False
+            
+    with col2:
+        auto_generate = st.checkbox("Auto-update", help="Automatically update recommendations when you change your profile")
+    
+    # Generate recommendations if button clicked or auto-update is enabled
+    if generate_recs or (auto_generate and selected_skills):
         with st.spinner("Analyzing your profile and generating recommendations..."):
             try:
-                # Create a query string from the profile
-                query = f"I have {experience_years} years experience with skills in {', '.join(selected_skills[:5])} seeking ${salary_expectation} salary with {growth_preference.lower()} growth preference"
-                
-                recommendations = engine.get_recommendations(query, num_recommendations=3)
+                # Use the user profile directly instead of converting to text
+                recommendations = engine.get_recommendations_from_profile(user_profile, num_recommendations=3)
                 
                 if recommendations:
+                    st.success(f"✅ Generated {len(recommendations)} personalized recommendations based on your profile!")
+                    
                     for i, rec in enumerate(recommendations, 1):
                         with st.container():
                             st.markdown(f"### {i}. {rec.role}")
@@ -133,6 +162,14 @@ with tab1:
                             
                             st.markdown(f"**Category:** {rec.category.replace('_', ' ')}")
                             st.markdown(f"**Why this fits:** {rec.reasoning}")
+                            
+                            # Show user's current skills vs required
+                            if selected_skills:
+                                st.markdown("**✅ Your current skills:**")
+                                skill_cols = st.columns(min(len(selected_skills), 4))
+                                for j, skill in enumerate(selected_skills[:4]):
+                                    with skill_cols[j % 4]:
+                                        st.markdown(f"• {skill}")
                             
                             # Skills needed
                             if rec.required_skills:
@@ -155,6 +192,9 @@ with tab1:
             except Exception as e:
                 logger.error(f"Failed to generate recommendations: {e}")
                 st.error("Failed to generate recommendations. Please try again.")
+    
+    elif not selected_skills:
+        st.info("👈 Please select some skills in the sidebar to get personalized recommendations!")
 
 with tab2:
     st.header("📊 Career Market Insights")

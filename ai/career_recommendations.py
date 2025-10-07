@@ -53,22 +53,22 @@ class CareerRecommendationEngine:
             logger.error(f"Failed to initialize recommendation engine: {e}")
             return False
     
-    def get_recommendations(
+    def get_recommendations_from_profile(
         self, 
-        user_input: str, 
+        user_profile: Dict, 
         num_recommendations: int = 3
     ) -> List[CareerRecommendation]:
-        """Get career recommendations based on user input."""
+        """Get career recommendations directly from user profile data."""
         if not self.is_trained:
             if not self.initialize():
                 return []
         
         try:
-            # Extract user profile
-            user_profile = create_user_profile_from_query(user_input)
-            
             # Get primary prediction
             prediction = self.decision_tree.predict_career_path(user_profile)
+            
+            if not prediction:
+                return []
             
             # Get recommendations from multiple categories
             recommendations = []
@@ -95,7 +95,7 @@ class CareerRecommendationEngine:
                         'primary_recommendation': category,
                         'confidence': score,
                         'top_roles': self._get_top_roles_for_category(category),
-                        'reasoning': f"Alternative path with {score:.1%} likelihood"
+                        'reasoning': f"Alternative path with {score:.1%} likelihood based on your {user_profile.get('experience_years', 0)} years experience and skills in {', '.join(user_profile.get('skills', [])[:3])}"
                     }
                     alt_rec = self._create_recommendation(
                         alt_prediction, 
@@ -106,6 +106,27 @@ class CareerRecommendationEngine:
                         recommendations.append(alt_rec)
             
             return recommendations[:num_recommendations]
+            
+        except Exception as e:
+            logger.error(f"Failed to generate recommendations from profile: {e}")
+            return []
+
+    def get_recommendations(
+        self, 
+        user_input: str, 
+        num_recommendations: int = 3
+    ) -> List[CareerRecommendation]:
+        """Get career recommendations based on user input."""
+        if not self.is_trained:
+            if not self.initialize():
+                return []
+        
+        try:
+            # Extract user profile
+            user_profile = create_user_profile_from_query(user_input)
+            
+            # Use the new method
+            return self.get_recommendations_from_profile(user_profile, num_recommendations)
             
         except Exception as e:
             logger.error(f"Failed to generate recommendations: {e}")
@@ -167,16 +188,39 @@ class CareerRecommendationEngine:
         return []
     
     def _get_required_skills(self, category: str, user_profile: Dict) -> List[str]:
-        """Get required skills for a career category."""
+        """Get required skills for a career category, considering user's current skills."""
         skill_map = {
-            'AI_ML': ['Python', 'Machine Learning', 'Deep Learning', 'Statistics', 'TensorFlow/PyTorch'],
-            'Cloud_Infrastructure': ['AWS/Azure/GCP', 'Kubernetes', 'Docker', 'Terraform', 'CI/CD'],
-            'Software_Engineering': ['Programming Languages', 'System Design', 'Database Design', 'Testing', 'Git'],
-            'Data_Engineering': ['SQL', 'Python/Scala', 'Big Data Tools', 'ETL/ELT', 'Data Modeling'],
+            'AI_ML': ['Python', 'Machine Learning', 'Deep Learning', 'Statistics', 'TensorFlow/PyTorch', 'Data Analysis'],
+            'Cloud_Infrastructure': ['AWS/Azure/GCP', 'Kubernetes', 'Docker', 'Terraform', 'CI/CD', 'Linux'],
+            'Software_Engineering': ['Programming Languages', 'System Design', 'Database Design', 'Testing', 'Git', 'APIs'],
+            'Data_Engineering': ['SQL', 'Python/Scala', 'Big Data Tools', 'ETL/ELT', 'Data Modeling', 'Apache Spark'],
             'Product_Management': ['Product Strategy', 'Market Analysis', 'Agile/Scrum', 'Stakeholder Management', 'Data Analysis'],
             'Cybersecurity': ['Security Frameworks', 'Network Security', 'Incident Response', 'Compliance', 'Scripting'],
             'Design_Mobile': ['UI/UX Design', 'Mobile Development', 'Design Tools', 'User Research', 'Prototyping']
         }
+        
+        base_skills = skill_map.get(category, ['Domain Knowledge', 'Problem Solving', 'Communication'])
+        user_skills = set(skill.lower() for skill in user_profile.get('skills', []))
+        
+        # Find skills user doesn't have, prioritizing by relevance
+        missing_skills = []
+        for skill in base_skills:
+            if not any(user_skill in skill.lower() or skill.lower() in user_skill for user_skill in user_skills):
+                missing_skills.append(skill)
+        
+        # If user has most skills, suggest advanced/specialized skills
+        if len(missing_skills) < 2:
+            advanced_skills = {
+                'AI_ML': ['MLOps', 'Computer Vision', 'Natural Language Processing', 'Reinforcement Learning'],
+                'Software_Engineering': ['Microservices', 'DevOps', 'Cloud Architecture', 'Performance Optimization'],
+                'Cloud_Infrastructure': ['Service Mesh', 'Observability', 'Site Reliability Engineering', 'Multi-Cloud'],
+                'Data_Engineering': ['Stream Processing', 'Data Governance', 'Data Mesh', 'Real-time Analytics'],
+                'Product_Management': ['Growth Strategy', 'Data-Driven Decisions', 'Technical Product Management'],
+                'Cybersecurity': ['Zero Trust Architecture', 'Cloud Security', 'Threat Intelligence', 'DevSecOps']
+            }
+            missing_skills.extend(advanced_skills.get(category, ['Leadership', 'Strategic Thinking'])[:3])
+        
+        return missing_skills[:5]  # Return top 5 missing skills
         
         base_skills = skill_map.get(category, ['Domain Knowledge', 'Problem Solving', 'Communication'])
         user_skills = set(user_profile.get('skills', []))
