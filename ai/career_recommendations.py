@@ -73,14 +73,25 @@ class CareerRecommendationEngine:
             # Get recommendations from multiple categories
             recommendations = []
             
-            # Primary recommendation
-            primary_rec = self._create_recommendation(
-                prediction, 
-                user_profile, 
-                is_primary=True
-            )
-            if primary_rec:
-                recommendations.append(primary_rec)
+            # Get top roles from the primary category
+            primary_category = prediction['primary_recommendation']
+            primary_roles = prediction.get('top_roles', [])
+            
+            # Add multiple roles from primary category
+            for i, role_data in enumerate(primary_roles[:3]):  # Top 3 from primary
+                rec_prediction = {
+                    'primary_recommendation': primary_category,
+                    'confidence': prediction['confidence'] * (1.0 - i * 0.1),  # Slightly decrease confidence for lower ranked roles
+                    'top_roles': [role_data],
+                    'reasoning': prediction.get('reasoning', '') if i == 0 else f"Strong alternative in {primary_category.replace('_', ' ')} based on your profile"
+                }
+                rec = self._create_recommendation(
+                    rec_prediction, 
+                    user_profile, 
+                    is_primary=(i == 0)
+                )
+                if rec:
+                    recommendations.append(rec)
             
             # Alternative recommendations from other high-scoring categories
             sorted_categories = sorted(
@@ -89,21 +100,29 @@ class CareerRecommendationEngine:
                 reverse=True
             )
             
-            for category, score in sorted_categories[1:num_recommendations]:
-                if score > 0.1:  # Only include if reasonably likely
-                    alt_prediction = {
-                        'primary_recommendation': category,
-                        'confidence': score,
-                        'top_roles': self._get_top_roles_for_category(category),
-                        'reasoning': f"Alternative path with {score:.1%} likelihood based on your {user_profile.get('experience_years', 0)} years experience and skills in {', '.join(user_profile.get('skills', [])[:3])}"
-                    }
-                    alt_rec = self._create_recommendation(
-                        alt_prediction, 
-                        user_profile, 
-                        is_primary=False
-                    )
-                    if alt_rec:
-                        recommendations.append(alt_rec)
+            # Add roles from other categories
+            for category, score in sorted_categories[1:]:
+                if score > 0.05 and len(recommendations) < num_recommendations:  # Lower threshold to get more variety
+                    category_roles = self._get_top_roles_for_category(category)
+                    
+                    # Add up to 2 roles per category
+                    for i, role_data in enumerate(category_roles[:2]):
+                        if len(recommendations) >= num_recommendations:
+                            break
+                            
+                        alt_prediction = {
+                            'primary_recommendation': category,
+                            'confidence': score * (1.0 - i * 0.1),
+                            'top_roles': [role_data],
+                            'reasoning': f"Alternative path in {category.replace('_', ' ')} with {score:.1%} match based on your {user_profile.get('experience_years', 0)} years experience and skills"
+                        }
+                        alt_rec = self._create_recommendation(
+                            alt_prediction, 
+                            user_profile, 
+                            is_primary=False
+                        )
+                        if alt_rec:
+                            recommendations.append(alt_rec)
             
             return recommendations[:num_recommendations]
             
@@ -180,7 +199,8 @@ class CareerRecommendationEngine:
                 category_data = self.decision_tree.career_data[
                     self.decision_tree.career_data['role_category'] == category
                 ]
-                return category_data.nlargest(3, 'avg_salary')[
+                # Return more roles to provide variety
+                return category_data.nlargest(5, 'avg_salary')[
                     ['role', 'avg_salary', 'growth_score']
                 ].to_dict('records')
         except Exception:
@@ -219,14 +239,6 @@ class CareerRecommendationEngine:
                 'Cybersecurity': ['Zero Trust Architecture', 'Cloud Security', 'Threat Intelligence', 'DevSecOps']
             }
             missing_skills.extend(advanced_skills.get(category, ['Leadership', 'Strategic Thinking'])[:3])
-        
-        return missing_skills[:5]  # Return top 5 missing skills
-        
-        base_skills = skill_map.get(category, ['Domain Knowledge', 'Problem Solving', 'Communication'])
-        user_skills = set(user_profile.get('skills', []))
-        
-        # Add skills user doesn't have
-        missing_skills = [skill for skill in base_skills if skill.lower() not in {s.lower() for s in user_skills}]
         
         return missing_skills[:5]  # Return top 5 missing skills
     

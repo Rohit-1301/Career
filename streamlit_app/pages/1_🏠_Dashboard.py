@@ -18,7 +18,7 @@ session_components.initialise_session()
 user = session_components.require_authentication()
 chain = session_components.get_ai_chain()
 
-st.title("🏠 Dashboard")
+st.title("🏠 Chat")
 
 if "uploaded_file_markers" not in st.session_state:
     st.session_state["uploaded_file_markers"] = []

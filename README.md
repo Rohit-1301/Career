@@ -140,7 +140,7 @@ careersaathi/
 │   └── storage.py             # File storage management
 ├── ⚙️ services/               # Core business logic
 │   └── utils.py               # Shared utilities
-├── 📊 exp.csv                 # Career data source
+├── 📊 tech.csv                # Career salary data source
 ├── 🤖 career_model.joblib     # Trained ML models
 ├── 📋 requirements.txt        # Python dependencies
 └── 🔧 .env.example           # Environment template
@@ -214,7 +214,7 @@ STREAMLIT_SERVER_ADDRESS=localhost
 ## 📊 Data Sources & Models
 
 ### **Career Data Pipeline**
-- **Source**: `exp.csv` with 65+ career roles
+- **Source**: `tech.csv` with 100+ tech career roles and salary data in LPA (Lakhs Per Annum)
 - **Features**: Salary ranges, growth projections, skill requirements
 - **Processing**: Advanced ETL with salary parsing and categorization
 - **Output**: Structured data for ML training and market analysis

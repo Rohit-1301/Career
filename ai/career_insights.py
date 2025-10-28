@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 class CareerDecisionTree:
     """Decision tree model for career path recommendations."""
     
-    def __init__(self, csv_path: str = "exp.csv"):
+    def __init__(self, csv_path: str = "tech.csv"):
         self.csv_path = csv_path
         self.model = None
         self.encoders = {}
@@ -92,6 +92,71 @@ class CareerDecisionTree:
         else:
             return 0.0
     
+    def _extract_growth_score_from_range(self, growth_str: str) -> float:
+        """Convert growth percentage range (e.g., '10-35') to numerical score."""
+        if pd.isna(growth_str) or str(growth_str).strip() == '':
+            return 3.0  # Default moderate growth
+        
+        try:
+            # Extract numbers from range like "10-35" or "30-80"
+            numbers = re.findall(r'\d+', str(growth_str))
+            if len(numbers) >= 2:
+                # Take the average of min and max percentages
+                min_pct = float(numbers[0])
+                max_pct = float(numbers[1])
+                avg_pct = (min_pct + max_pct) / 2
+                
+                # Convert percentage to score (0-100% -> 0-5 score)
+                # 0-10%: 1.0, 10-20%: 2.0, 20-40%: 3.0, 40-60%: 4.0, 60%+: 5.0
+                if avg_pct >= 60:
+                    return 5.0
+                elif avg_pct >= 40:
+                    return 4.0
+                elif avg_pct >= 20:
+                    return 3.0
+                elif avg_pct >= 10:
+                    return 2.0
+                else:
+                    return 1.0
+            elif len(numbers) == 1:
+                # Single percentage value
+                pct = float(numbers[0])
+                if pct >= 60:
+                    return 5.0
+                elif pct >= 40:
+                    return 4.0
+                elif pct >= 20:
+                    return 3.0
+                elif pct >= 10:
+                    return 2.0
+                else:
+                    return 1.0
+        except Exception as e:
+            logger.warning(f"Error parsing growth range '{growth_str}': {e}")
+        
+        return 3.0  # Default moderate growth
+    
+    def _estimate_skill_count(self, role: str, domain: str) -> int:
+        """Estimate skill count based on role and domain complexity."""
+        skill_count = 4  # Base skill count
+        
+        role_lower = role.lower()
+        domain_lower = domain.lower()
+        
+        # Senior roles require more skills
+        if any(word in role_lower for word in ['senior', 'principal', 'architect', 'lead', 'director']):
+            skill_count += 3
+        
+        # Specialized roles require more skills
+        if any(word in role_lower for word in ['full stack', 'full-stack', 'research', 'ai', 'ml', 'quantum']):
+            skill_count += 2
+        
+        # Complex domains require more skills
+        if any(word in domain_lower for word in ['ml', 'ai', 'data', 'cybersecurity', 'blockchain', 'quantum']):
+            skill_count += 1
+        
+        return min(skill_count, 10)  # Cap at 10 skills
+    
     def _categorize_role(self, role: str) -> str:
         """Categorize roles into major career tracks."""
         if pd.isna(role):
@@ -130,83 +195,77 @@ class CareerDecisionTree:
             return "Other"
     
     def preprocess_data(self) -> pd.DataFrame:
-        """Load and preprocess the career data."""
+        """Load and preprocess the career data from tech.csv."""
         try:
-            # Read the CSV file
-            df = pd.read_csv(self.csv_path, sep='|')
+            # Read the CSV file (tech.csv is comma-separated)
+            df = pd.read_csv(self.csv_path)
             
             # Clean column names
             df.columns = df.columns.str.strip()
             
-            # Skip header rows and empty rows
-            df = df[df['Role'].notna() & (df['Role'] != 'Role') & (~df['Role'].str.contains(r'\*\*.*\*\*', na=False))]
-            df = df[df['Role'].str.strip() != '']
-            
-            # Remove rows that are just separators or empty
-            df = df[~df['Role'].str.contains(r'^[-|]+$', na=False)]
-            df = df[df['Role'].str.len() > 3]  # Remove very short entries
+            # Remove empty rows
+            df = df[df['JobTitle'].notna()]
+            df = df[df['JobTitle'].str.strip() != '']
             
             # Extract features
             processed_data = []
             
             for _, row in df.iterrows():
                 try:
-                    role = str(row['Role']).strip()
-                    growth = str(row.get('Projected Growth Outlook (CAGR 2025-2030)', '')) if 'Projected Growth Outlook (CAGR 2025-2030)' in row else ''
-                    salary = str(row.get('Typical US Salary Range (USD)', '')) if 'Typical US Salary Range (USD)' in row else ''
-                    skills = str(row.get('Required Core Skills to Master', '')) if 'Required Core Skills to Master' in row else ''
+                    role = str(row['JobTitle']).strip()
+                    domain = str(row.get('Domain', ''))
                     
-                    # Skip if essential data is missing
-                    if not role or role in ['Role', ''] or 'AI/ML' in role:
-                        continue
+                    # Get salary data (in LPA - Lakhs Per Annum)
+                    entry_sal = float(row.get('EntrySalary_LPA', 0))
+                    mid_sal = float(row.get('MidSalary_LPA', 0))
+                    senior_sal = float(row.get('SeniorSalary_LPA', 0))
                     
-                    # Extract salary range
-                    min_sal, max_sal = self._extract_salary_range(salary)
-                    if min_sal == 0 and max_sal == 0:
-                        # Assign default salaries based on role keywords
-                        role_lower = role.lower()
-                        if any(word in role_lower for word in ['senior', 'principal', 'director', 'lead']):
-                            min_sal, max_sal = 150000, 250000
-                        elif any(word in role_lower for word in ['engineer', 'developer', 'scientist']):
-                            min_sal, max_sal = 100000, 180000
-                        else:
-                            min_sal, max_sal = 80000, 120000
+                    # Convert LPA to USD (1 Lakh INR ≈ $1,200 USD at approximate exchange rate)
+                    # Using a conversion rate: 1 LPA = $1,200 USD
+                    lpa_to_usd = 1200
+                    entry_sal_usd = entry_sal * lpa_to_usd
+                    mid_sal_usd = mid_sal * lpa_to_usd
+                    senior_sal_usd = senior_sal * lpa_to_usd
                     
-                    avg_salary = (min_sal + max_sal) / 2 if max_sal > 0 else min_sal
+                    # Calculate average salary across all levels
+                    avg_salary = (entry_sal_usd + mid_sal_usd + senior_sal_usd) / 3
                     
-                    # Extract growth score
-                    growth_score = self._extract_growth_score(growth)
-                    if growth_score == 0:
-                        growth_score = 3.0  # Default to moderate growth
+                    # Extract growth outlook (format: "10-35" means 10-35% growth)
+                    growth_str = str(row.get('GrowthOutlook_pct_range', ''))
+                    growth_score = self._extract_growth_score_from_range(growth_str)
                     
                     # Categorize role
                     role_category = self._categorize_role(role)
                     
-                    # Count skills (rough proxy for complexity)
-                    skill_count = len(str(skills).split(',')) if pd.notna(skills) and skills else 3
+                    # Estimate skill count based on domain and role complexity
+                    skill_count = self._estimate_skill_count(role, domain)
                     
                     # Determine experience level from role title
                     exp_level = 0
-                    role_lower = str(role).lower()
-                    if any(word in role_lower for word in ['senior', 'principal', 'lead', 'director']):
+                    role_lower = role.lower()
+                    if any(word in role_lower for word in ['senior', 'principal', 'lead', 'director', 'architect', 'head']):
                         exp_level = 2  # Senior
-                    elif any(word in role_lower for word in ['junior', 'entry', 'associate']):
+                    elif any(word in role_lower for word in ['junior', 'entry', 'associate', 'intern']):
                         exp_level = 0  # Entry
                     else:
                         exp_level = 1  # Mid
                     
                     processed_data.append({
                         'role': role,
+                        'domain': domain,
                         'role_category': role_category,
                         'growth_score': growth_score,
                         'avg_salary': avg_salary,
+                        'entry_salary': entry_sal_usd,
+                        'mid_salary': mid_sal_usd,
+                        'senior_salary': senior_sal_usd,
                         'skill_count': skill_count,
                         'experience_level': exp_level,
                         'salary_tier': 'High' if avg_salary > 150000 else 'Medium' if avg_salary > 100000 else 'Low'
                     })
                     
                 except Exception as e:
-                    logger.warning(f"Skipping row due to error: {e}")
+                    logger.warning(f"Skipping row {role if 'role' in locals() else 'unknown'} due to error: {e}")
                     continue
             
             processed_df = pd.DataFrame(processed_data)
@@ -217,7 +276,7 @@ class CareerDecisionTree:
                 logger.warning("Insufficient data found, creating synthetic data")
                 processed_df = self._create_synthetic_data()
             
-            logger.info(f"Processed {len(processed_df)} career records")
+            logger.info(f"Processed {len(processed_df)} career records from {self.csv_path}")
             return processed_df
             
         except Exception as e:
@@ -383,17 +442,45 @@ class CareerDecisionTree:
         if not user_skills:
             return category_scores
         
-        # Define skill-to-category mappings
+        # Define skill-to-category mappings with more comprehensive coverage
         skill_category_map = {
+            # AI/ML skills
             'python': ['AI_ML', 'Data_Engineering', 'Software_Engineering'],
-            'java': ['Software_Engineering'],
+            'machine learning': ['AI_ML'],
+            'deep learning': ['AI_ML'],
+            'data science': ['AI_ML', 'Data_Engineering'],
+            'tensorflow': ['AI_ML'],
+            'pytorch': ['AI_ML'],
+            'statistics': ['AI_ML', 'Data_Engineering'],
+            
+            # Web Development skills
             'javascript': ['Software_Engineering'],
+            'js': ['Software_Engineering'],
             'react': ['Software_Engineering'],
             'angular': ['Software_Engineering'],
+            'vue': ['Software_Engineering'],
             'node.js': ['Software_Engineering'],
-            'machine learning': ['AI_ML'],
-            'data science': ['AI_ML', 'Data_Engineering'],
+            'node': ['Software_Engineering'],
+            'html': ['Software_Engineering'],
+            'css': ['Software_Engineering'],
+            'html/css': ['Software_Engineering'],
+            'rest apis': ['Software_Engineering'],
+            'api': ['Software_Engineering'],
+            'frontend': ['Software_Engineering'],
+            'backend': ['Software_Engineering'],
+            
+            # Programming Languages
+            'java': ['Software_Engineering'],
+            'c++': ['Software_Engineering'],
+            'c#': ['Software_Engineering'],
+            'go': ['Software_Engineering'],
+            'rust': ['Software_Engineering'],
+            
+            # Data Engineering
             'sql': ['Data_Engineering', 'AI_ML'],
+            'database': ['Data_Engineering', 'Software_Engineering'],
+            
+            # Cloud & DevOps
             'aws': ['Cloud_Infrastructure'],
             'azure': ['Cloud_Infrastructure'],
             'gcp': ['Cloud_Infrastructure'],
@@ -401,29 +488,67 @@ class CareerDecisionTree:
             'kubernetes': ['Cloud_Infrastructure'],
             'devops': ['Cloud_Infrastructure'],
             'ci/cd': ['Cloud_Infrastructure'],
+            
+            # Design & Mobile
             'design': ['Design_Mobile'],
             'ui': ['Design_Mobile'],
             'ux': ['Design_Mobile'],
+            'ui/ux': ['Design_Mobile'],
             'mobile development': ['Design_Mobile'],
+            'mobile': ['Design_Mobile'],
             'ios': ['Design_Mobile'],
             'android': ['Design_Mobile'],
+            
+            # Security
             'cybersecurity': ['Cybersecurity'],
+            'security': ['Cybersecurity'],
+            
+            # Product Management
             'project management': ['Product_Management'],
             'product management': ['Product_Management']
         }
         
-        adjusted_scores = category_scores.copy()
+        # Start with zero scores for all categories to force skill-based matching
+        adjusted_scores = {cat: 0.0 for cat in category_scores.keys()}
         
-        # Boost categories that match user skills
+        # Count skill matches per category
+        category_match_count = {cat: 0 for cat in adjusted_scores.keys()}
+        
+        # Boost categories that match user skills - VERY AGGRESSIVELY
         for skill in user_skills:
-            skill_lower = skill.lower()
+            skill_lower = skill.lower().strip()
+            matched = False
+            
             for skill_key, categories in skill_category_map.items():
                 if skill_key in skill_lower or skill_lower in skill_key:
+                    matched = True
                     for category in categories:
                         if category in adjusted_scores:
-                            # Boost the score by 20-50% based on skill relevance
-                            boost = 0.3 if skill_key == skill_lower else 0.2
+                            category_match_count[category] += 1
+                            # VERY STRONG boost for skill match - start with high base score
+                            boost = 0.9 if skill_key == skill_lower else 0.7
                             adjusted_scores[category] = min(1.0, adjusted_scores[category] + boost)
+            
+            # If no match found, give small boost to Software_Engineering as default
+            if not matched:
+                if 'Software_Engineering' in adjusted_scores:
+                    adjusted_scores['Software_Engineering'] = min(1.0, adjusted_scores['Software_Engineering'] + 0.3)
+        
+        # Apply HUGE multiplier based on match count (more matching skills = MUCH higher boost)
+        for category, match_count in category_match_count.items():
+            if match_count > 0:
+                # Exponential boost for multiple matching skills
+                multiplier = 1.0 + (match_count * 0.5)  # 50% boost per matching skill
+                adjusted_scores[category] = min(1.0, adjusted_scores[category] * multiplier)
+        
+        # If no skills matched at all, fall back to original predictions
+        if all(score == 0.0 for score in adjusted_scores.values()):
+            adjusted_scores = category_scores.copy()
+        
+        # Zero out categories with no skill matches to prevent AI/ML from dominating
+        for category in adjusted_scores.keys():
+            if category_match_count[category] == 0 and adjusted_scores[category] > 0:
+                adjusted_scores[category] = adjusted_scores[category] * 0.1  # Drastically reduce non-matching categories
         
         # Normalize scores
         total_score = sum(adjusted_scores.values())

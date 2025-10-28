@@ -15,6 +15,19 @@ from services.utils import get_logger
 
 logger = get_logger(__name__)
 
+# Currency conversion helper
+USD_TO_INR = 83  # 1 USD ≈ 83 INR
+
+def format_inr_salary(usd_salary):
+    """Convert USD salary to INR and format it."""
+    inr_salary = usd_salary * USD_TO_INR
+    if inr_salary >= 10000000:  # 1 Crore or more
+        return f"₹{inr_salary/10000000:.2f} Cr"
+    elif inr_salary >= 100000:  # 1 Lakh or more
+        return f"₹{inr_salary/100000:.2f} LPA"
+    else:
+        return f"₹{inr_salary:,.0f}"
+
 # Initialize session and require authentication
 session_components.initialise_session()
 user = session_components.require_authentication()
@@ -66,15 +79,19 @@ with st.sidebar:
                 if st.checkbox(skill, key=f"skill_{skill}"):
                     selected_skills.append(skill)
     
-    # Salary expectation
-    salary_expectation = st.slider(
-        "💰 Salary Expectation (USD)",
-        min_value=50000,
-        max_value=300000,
-        value=100000,
-        step=10000,
-        help="Your target annual salary"
+    # Salary expectation in INR
+    salary_expectation_inr = st.slider(
+        "💰 Salary Expectation (INR per year)",
+        min_value=300000,      # 3 LPA
+        max_value=10000000,    # 1 Crore
+        value=1200000,         # 12 LPA
+        step=100000,           # 1 Lakh steps
+        help="Your target annual salary in Indian Rupees",
+        format="₹%d"
     )
+    
+    # Convert INR to USD for internal calculations (1 USD ≈ 83 INR)
+    salary_expectation = salary_expectation_inr / 83
     
     # Growth preference
     growth_preference = st.select_slider(
@@ -83,18 +100,6 @@ with st.sidebar:
         value="High",
         help="How important is career growth potential to you?"
     )
-    
-    # Industry interests
-    industries = [
-        "Technology", "Finance", "Healthcare", "Education", "Consulting",
-        "Government", "Startups", "Enterprise", "Research", "Gaming"
-    ]
-    preferred_industries = st.multiselect(
-        "🏢 Industry Interests",
-        industries,
-        default=["Technology"],
-        help="Industries you're interested in working in"
-    )
 
 # Create user profile
 growth_map = {"Stable": 1.0, "Moderate": 2.0, "High": 3.0, "Very High": 4.0, "Explosive": 5.0}
@@ -102,12 +107,11 @@ user_profile = {
     'experience_years': experience_years,
     'skills': selected_skills,
     'salary_expectation': salary_expectation,
-    'growth_preference': growth_map[growth_preference],
-    'industries': preferred_industries
+    'growth_preference': growth_map[growth_preference]
 }
 
 # Main content area
-tab1, tab2, tab3, tab4 = st.tabs(["🎯 Recommendations", "📊 Market Insights", "📈 Career Gap Analysis", "🤖 AI Chat"])
+tab1, tab2, tab3 = st.tabs(["🎯 Recommendations", "📊 Market Insights", "📈 Career Gap Analysis"])
 
 # Show a quick preview of the current profile
 with st.expander("📋 Your Profile Summary", expanded=False):
@@ -116,7 +120,7 @@ with st.expander("📋 Your Profile Summary", expanded=False):
         st.metric("Experience", f"{experience_years} years")
         st.metric("Skills Count", len(selected_skills))
     with col2:
-        st.metric("Salary Target", f"${salary_expectation:,}")
+        st.metric("Salary Target", f"₹{salary_expectation_inr:,.0f}")
         st.metric("Growth Focus", growth_preference)
     with col3:
         st.write("**Top Skills:**")
@@ -128,75 +132,197 @@ with st.expander("📋 Your Profile Summary", expanded=False):
 with tab1:
     st.header("Your Personalized Career Recommendations")
     
-    # Add auto-generate option
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        if st.button("🔮 Generate Recommendations", type="primary"):
-            generate_recs = True
-        else:
-            generate_recs = False
+    # Check if user has provided sufficient information
+    if not selected_skills:
+        st.warning("⚠️ **Please add your skills to get personalized recommendations!**")
+        st.info("""
+        ### 📝 To get started:
+        1. **Select your skills** from the sidebar (under "🛠️ Skills")
+        2. **Set your experience level** to help us understand your background
+        3. **Adjust your salary expectations** to match your goals
+        4. **Choose your growth preference** to find the right career path
+        
+        Once you've completed your profile, recommendations will appear automatically!
+        """)
+        st.image("https://via.placeholder.com/600x300/4ECDC4/FFFFFF?text=Add+Your+Skills+to+Get+Started", use_container_width=True)
+    else:
+        # Validate profile completeness
+        if len(selected_skills) < 2:
+            st.warning("⚠️ **Please add at least 2 skills for better recommendations!**")
+            st.info("""
+            We need more information about your skills to provide accurate career recommendations.
             
-    with col2:
-        auto_generate = st.checkbox("Auto-update", help="Automatically update recommendations when you change your profile")
-    
-    # Generate recommendations if button clicked or auto-update is enabled
-    if generate_recs or (auto_generate and selected_skills):
-        with st.spinner("Analyzing your profile and generating recommendations..."):
-            try:
-                # Use the user profile directly instead of converting to text
-                recommendations = engine.get_recommendations_from_profile(user_profile, num_recommendations=3)
-                
-                if recommendations:
-                    st.success(f"✅ Generated {len(recommendations)} personalized recommendations based on your profile!")
+            **Please add more skills from the sidebar to continue.**
+            """)
+        else:
+            with st.spinner("🔮 Analyzing your profile and generating personalized recommendations..."):
+                try:
+                    # Use the user profile directly instead of converting to text
+                    recommendations = engine.get_recommendations_from_profile(user_profile, num_recommendations=10)
                     
-                    for i, rec in enumerate(recommendations, 1):
-                        with st.container():
-                            st.markdown(f"### {i}. {rec.role}")
+                    if recommendations:
+                        st.success(f"✅ Generated {len(recommendations)} personalized recommendations based on your unique profile!")
+                        
+                        # Show dynamic insights based on selected skills
+                        st.info(f"""
+                        💡 **Smart Match**: Based on your expertise in **{', '.join(selected_skills[:3])}**{' and ' + str(len(selected_skills) - 3) + ' more skills' if len(selected_skills) > 3 else ''}, 
+                        we've identified the most relevant career paths with **{format_inr_salary(recommendations[0].avg_salary)}** average salary potential.
+                        """)
+                        
+                        for i, rec in enumerate(recommendations, 1):
+                            with st.container():
+                                # Make recommendation headers more prominent with colors
+                                if i == 1:
+                                    st.markdown(f"### 🥇 {i}. {rec.role}")
+                                elif i == 2:
+                                    st.markdown(f"### 🥈 {i}. {rec.role}")
+                                else:
+                                    st.markdown(f"### 🥉 {i}. {rec.role}")
+                                
+                                col1, col2, col3, col4 = st.columns(4)
+                                with col1:
+                                    st.metric("💰 Average Salary", format_inr_salary(rec.avg_salary))
+                                with col2:
+                                    growth_emoji = "🚀" if rec.growth_score > 4 else "📈" if rec.growth_score > 3 else "➡️"
+                                    st.metric(f"{growth_emoji} Growth Score", f"{rec.growth_score:.1f}/5.0")
+                                with col3:
+                                    confidence_color = "🟢" if rec.confidence > 0.6 else "🟡" if rec.confidence > 0.3 else "🔴"
+                                    st.metric(f"{confidence_color} Match", f"{rec.confidence:.0%}")
+                                with col4:
+                                    category_emoji = {
+                                        'AI_ML': '🤖',
+                                        'Cloud_Infrastructure': '☁️',
+                                        'Software_Engineering': '💻',
+                                        'Data_Engineering': '📊',
+                                        'Product_Management': '📦',
+                                        'Cybersecurity': '🔒',
+                                        'Design_Mobile': '📱'
+                                    }
+                                    emoji = category_emoji.get(rec.category, '🎯')
+                                    st.metric(f"{emoji} Category", rec.category.replace('_', ' '))
+                                
+                                st.markdown(f"**💡 Why this fits:** {rec.reasoning}")
+                                
+                                # Create interactive skill comparison
+                                col_skills_1, col_skills_2 = st.columns(2)
+                                
+                                with col_skills_1:
+                                    st.markdown("**✅ Your Current Skills:**")
+                                    if selected_skills:
+                                        # Show skills in a nicer format with badges
+                                        skill_tags = " ".join([f"`{skill}`" for skill in selected_skills[:6]])
+                                        st.markdown(skill_tags)
+                                        if len(selected_skills) > 6:
+                                            st.markdown(f"*+{len(selected_skills) - 6} more skills*")
+                                    
+                                with col_skills_2:
+                                    # Skills needed
+                                    if rec.required_skills:
+                                        st.markdown("**🛠️ Skills to Develop:**")
+                                        skill_tags = " ".join([f"`{skill}`" for skill in rec.required_skills[:6]])
+                                        st.markdown(skill_tags)
+                                        if len(rec.required_skills) > 6:
+                                            st.markdown(f"*+{len(rec.required_skills) - 6} more skills*")
+                                
+                                # Interactive expandable section for next steps
+                                with st.expander(f"📋 See Your Action Plan for {rec.role}", expanded=(i==1)):
+                                    if rec.next_steps:
+                                        st.markdown("**🎯 Recommended Next Steps:**")
+                                        for idx, step in enumerate(rec.next_steps, 1):
+                                            st.markdown(f"{idx}. {step}")
+                                    
+                                    # Add interactive checkboxes for tracking progress
+                                    st.markdown("---")
+                                    st.markdown("**📝 Track Your Progress:**")
+                                    for idx, step in enumerate(rec.next_steps[:3], 1):
+                                        st.checkbox(f"Complete: {step[:50]}...", key=f"progress_{rec.role}_{idx}")
+                                
+                                st.divider()
+                        
+                        # Add comparison chart for recommendations
+                        if len(recommendations) > 1:
+                            st.subheader("📊 Compare Your Recommendations")
                             
+                            comparison_data = {
+                                'Role': [rec.role for rec in recommendations],
+                                'Salary (INR)': [rec.avg_salary * USD_TO_INR for rec in recommendations],
+                                'Salary (LPA)': [rec.avg_salary * USD_TO_INR / 100000 for rec in recommendations],
+                                'Growth': [rec.growth_score for rec in recommendations],
+                                'Match %': [rec.confidence * 100 for rec in recommendations]
+                            }
+                            
+                            comparison_df = pd.DataFrame(comparison_data)
+                            
+                            # Create interactive comparison chart
+                            fig = go.Figure()
+                            
+                            fig.add_trace(go.Bar(
+                                name='Salary (in LPA)',
+                                x=comparison_df['Role'],
+                                y=comparison_df['Salary (LPA)'],
+                                marker_color='#4ECDC4',
+                                yaxis='y',
+                                offsetgroup=1,
+                                hovertemplate='<b>%{x}</b><br>Salary: ₹%{y:.1f} LPA<extra></extra>'
+                            ))
+                            
+                            fig.add_trace(go.Bar(
+                                name='Growth Score (×3)',
+                                x=comparison_df['Role'],
+                                y=comparison_df['Growth'] * 3,
+                                marker_color='#FF6B6B',
+                                yaxis='y',
+                                offsetgroup=2,
+                                hovertemplate='<b>%{x}</b><br>Growth: %{customdata:.1f}/5.0<extra></extra>',
+                                customdata=comparison_df['Growth']
+                            ))
+                            
+                            fig.add_trace(go.Bar(
+                                name='Match % (×0.2)',
+                                x=comparison_df['Role'],
+                                y=comparison_df['Match %'] * 0.2,
+                                marker_color='#45B7D1',
+                                yaxis='y',
+                                offsetgroup=3,
+                                hovertemplate='<b>%{x}</b><br>Match: %{customdata:.0f}%<extra></extra>',
+                                customdata=comparison_df['Match %']
+                            ))
+                            
+                            fig.update_layout(
+                                title='Quick Comparison: Salary (LPA) vs Growth vs Match',
+                                xaxis_title='Career Role',
+                                yaxis_title='Value (LPA / Score)',
+                                barmode='group',
+                                height=600,  # Increased height for more roles
+                                showlegend=True,
+                                hovermode='x unified',
+                                xaxis_tickangle=-45  # Angle labels for better readability
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Add summary statistics
+                            st.markdown("### 📈 Quick Stats")
                             col1, col2, col3 = st.columns(3)
                             with col1:
-                                st.metric("💰 Average Salary", f"${rec.avg_salary:,.0f}")
+                                avg_salary = sum(rec.avg_salary for rec in recommendations) / len(recommendations)
+                                st.metric("Average Salary (All Paths)", format_inr_salary(avg_salary))
                             with col2:
-                                st.metric("📈 Growth Score", f"{rec.growth_score:.1f}/5.0")
+                                avg_growth = sum(rec.growth_score for rec in recommendations) / len(recommendations)
+                                st.metric("Average Growth Score", f"{avg_growth:.1f}/5.0")
                             with col3:
-                                st.metric("🎯 Confidence", f"{rec.confidence:.0%}")
+                                high_match = sum(1 for rec in recommendations if rec.confidence > 0.5)
+                                st.metric("High Match Roles", f"{high_match}/{len(recommendations)}")
                             
-                            st.markdown(f"**Category:** {rec.category.replace('_', ' ')}")
-                            st.markdown(f"**Why this fits:** {rec.reasoning}")
-                            
-                            # Show user's current skills vs required
-                            if selected_skills:
-                                st.markdown("**✅ Your current skills:**")
-                                skill_cols = st.columns(min(len(selected_skills), 4))
-                                for j, skill in enumerate(selected_skills[:4]):
-                                    with skill_cols[j % 4]:
-                                        st.markdown(f"• {skill}")
-                            
-                            # Skills needed
-                            if rec.required_skills:
-                                st.markdown("**🛠️ Skills to develop:**")
-                                skill_cols = st.columns(min(len(rec.required_skills), 3))
-                                for j, skill in enumerate(rec.required_skills[:3]):
-                                    with skill_cols[j % 3]:
-                                        st.markdown(f"• {skill}")
-                            
-                            # Next steps
-                            if rec.next_steps:
-                                st.markdown("**📋 Next steps:**")
-                                for step in rec.next_steps[:3]:
-                                    st.markdown(f"1. {step}")
-                            
-                            st.divider()
-                else:
-                    st.warning("No recommendations could be generated. Please adjust your profile and try again.")
-                    
-            except Exception as e:
-                logger.error(f"Failed to generate recommendations: {e}")
-                st.error("Failed to generate recommendations. Please try again.")
-    
-    elif not selected_skills:
-        st.info("👈 Please select some skills in the sidebar to get personalized recommendations!")
+                    else:
+                        st.warning("No recommendations could be generated. Please adjust your profile and try again.")
+                        
+                except Exception as e:
+                    logger.error(f"Failed to generate recommendations: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    st.error("Failed to generate recommendations. Please try again or adjust your profile.")
+
 
 with tab2:
     st.header("📊 Career Market Insights")
@@ -210,7 +336,7 @@ with tab2:
         with col1:
             st.metric("Active Categories", "7", help="Major career categories tracked")
         with col2:
-            st.metric("Avg Salary Range", "$80K - $200K", help="Typical salary range across all categories")
+            st.metric("Avg Salary Range", "₹6.6 - ₹16.6 LPA", help="Typical salary range across all categories in Indian Rupees")
         with col3:
             st.metric("High Growth Areas", "3", help="Categories with >4.0 growth score")
         with col4:
@@ -345,9 +471,9 @@ with tab2:
         
         # Format the dataframe for better display
         display_df = market_df.copy()
-        display_df['Avg Salary'] = display_df['Avg Salary'].apply(lambda x: f"${x:,}")
-        display_df['Min Salary'] = display_df['Min Salary'].apply(lambda x: f"${x:,}")
-        display_df['Max Salary'] = display_df['Max Salary'].apply(lambda x: f"${x:,}")
+        display_df['Avg Salary'] = display_df['Avg Salary'].apply(lambda x: f"₹{x*USD_TO_INR/100000:.1f} LPA")
+        display_df['Min Salary'] = display_df['Min Salary'].apply(lambda x: f"₹{x*USD_TO_INR/100000:.1f} LPA")
+        display_df['Max Salary'] = display_df['Max Salary'].apply(lambda x: f"₹{x*USD_TO_INR/100000:.1f} LPA")
         display_df['Growth Score'] = display_df['Growth Score'].apply(lambda x: f"{x}/5.0")
         
         # Add trend indicators
@@ -419,7 +545,7 @@ with tab2:
                             
                             Skill Match: {score} skills
                             
-                            Avg Salary: ${cat_data['avg_salary']:,}
+                            Avg Salary: ₹{cat_data['avg_salary']*USD_TO_INR/100000:.1f} LPA
                             
                             Growth: {cat_data['growth']}/5.0
                             
@@ -493,7 +619,7 @@ with tab3:
             with st.spinner("Performing comprehensive career gap analysis..."):
                 try:
                     # Get recommendations to understand target roles
-                    recommendations = engine.get_recommendations_from_profile(user_profile, num_recommendations=3)
+                    recommendations = engine.get_recommendations_from_profile(user_profile, num_recommendations=10)
                     
                     if recommendations:
                         target_rec = recommendations[0]  # Primary recommendation
@@ -565,7 +691,8 @@ with tab3:
                             
                             st.metric("Skills Match", f"{skill_match_rate:.0f}%", f"{skills_you_have}/{len(target_rec.required_skills)} skills")
                             st.metric("Skills to Learn", skills_to_learn)
-                            st.metric("Target Salary", f"${target_rec.avg_salary:,}", f"+${target_rec.avg_salary - salary_expectation:,}")
+                            salary_diff_inr = (target_rec.avg_salary - salary_expectation) * USD_TO_INR
+                            st.metric("Target Salary", format_inr_salary(target_rec.avg_salary), f"+₹{salary_diff_inr/100000:.1f} LPA")
                             
                             # Experience gap
                             target_exp_map = {0: "0-2 years", 1: "3-7 years", 2: "8+ years"}
@@ -737,35 +864,6 @@ with tab3:
     
     else:
         st.info("👈 Please select your skills and experience level in the sidebar to get personalized gap analysis!")
-
-with tab4:
-    st.header("🤖 AI Career Chat")
-    st.markdown("Ask me anything about your career path!")
-    
-    # Chat input
-    user_question = st.text_area(
-        "Your Question:",
-        placeholder="E.g., 'What's the best way to transition from data analysis to machine learning?' or 'Should I pursue a cloud certification?'",
-        height=100
-    )
-    
-    if st.button("💬 Get AI Advice", type="primary") and user_question:
-        with st.spinner("Generating personalized career advice..."):
-            try:
-                # Enhance the question with user profile context
-                enhanced_query = f"{user_question}. Context: I have {experience_years} years experience with skills in {', '.join(selected_skills[:5])} and salary expectation of ${salary_expectation}."
-                
-                advice = get_quick_career_advice(enhanced_query)
-                
-                if advice:
-                    st.markdown("### 💡 AI Career Advice")
-                    st.markdown(advice)
-                else:
-                    st.warning("I couldn't generate advice for your question. Please try rephrasing it.")
-                    
-            except Exception as e:
-                logger.error(f"Failed to generate AI advice: {e}")
-                st.error("Failed to generate career advice. Please try again.")
 
 # Footer with tips
 st.markdown("---")

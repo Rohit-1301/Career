@@ -42,7 +42,7 @@ def render_authenticated_home() -> None:
         """
         Use the sidebar to navigate between pages:
 
-        - **🏠 Dashboard** — Ask the AI coach questions, upload supporting documents,
+        - **🏠 Chat** — Ask the AI coach questions, upload supporting documents,
           and receive personalised guidance powered by LangChain + Gemini.
         - **📜 History** — Revisit your previous conversations and insights.
         - **📂 Uploads** — Manage the files you've shared with CareerSaathi.

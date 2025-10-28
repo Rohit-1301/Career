@@ -1,0 +1,100 @@
+JobTitle,Domain,EntrySalary_LPA,MidSalary_LPA,SeniorSalary_LPA,GrowthOutlook_pct_range,SourceNotes
+Software Engineer,Software Development,3.5,8.0,20.0,10-35,Glassdoor avg & market surveys
+Backend Developer,Software Development,3.5,8.5,22.0,10-35,Market averages for server-side engineers
+Frontend Developer,Software Development,3.0,7.0,18.0,10-30,Front-end demand strong in web stacks
+Full-Stack Developer,Software Development,4.0,10.0,24.0,15-40,High demand across startups and product firms
+Mobile Developer - Android,Software Development,3.0,7.5,20.0,10-30,Android app dev demand
+Mobile Developer - iOS,Software Development,3.5,8.0,22.0,10-30,iOS dev salaries slightly higher in product firms
+Data Scientist,Data & ML,4.5,12.0,30.0,30-80,PayScale / Glassdoor averages
+Machine Learning Engineer,Data & ML,5.0,14.0,35.0,35-85,High demand for ML engineers
+AI Researcher,Data & ML,8.0,20.0,45.0,40-100,Specialist research roles
+NLP Engineer,Data & ML,5.0,13.0,32.0,35-80,NLP demand from conversational AI
+Computer Vision Engineer,Data & ML,5.0,13.0,34.0,35-80,"Vision roles in autonomy, retail, surveillance"
+Data Engineer,Data & ML,4.0,11.0,28.0,30-70,"ETL, pipelines, big data infra"
+Big Data Engineer / Hadoop,Data & ML,3.5,9.0,25.0,20-50,Big data platform roles
+BI Developer / Analyst,Data & Analytics,3.0,8.0,20.0,10-40,Reporting and analytics
+Data Analyst,Data & Analytics,2.5,6.0,14.0,10-35,Entry pathway to data roles
+ML Ops Engineer,Data & ML,4.5,12.0,28.0,30-75,Deployment & infra for ML models
+Cloud Engineer,Cloud & Infra,3.5,10.0,26.0,30-70,AWS/Azure/GCP skills in demand
+Cloud Architect,Cloud & Infra,8.0,20.0,40.0,30-70,Senior cloud design roles
+DevOps Engineer,Cloud & Infra,3.5,9.5,25.0,25-65,"CI/CD, infra automation"
+Site Reliability Engineer (SRE),Cloud & Infra,4.5,12.0,30.0,30-70,Reliability & scalability
+Systems Administrator,IT Ops,2.5,6.5,15.0,5-20,Legacy infra roles
+Network Engineer,IT Ops,3.0,7.0,18.0,5-25,Network design and operations
+Security Analyst,Cybersecurity,4.0,11.0,26.0,30-70,InfoSec demand rising
+Cybersecurity Engineer,Cybersecurity,5.0,13.0,30.0,35-80,High growth for security specialists
+Security Architect,Cybersecurity,9.0,22.0,45.0,30-70,Senior security design
+Penetration Tester / Ethical Hacker,Cybersecurity,3.5,9.0,22.0,30-80,Offensive security demand
+Cloud Security Engineer,Cybersecurity,4.0,12.0,28.0,30-75,Cloud-native security
+Blockchain Developer,Emerging Tech,4.0,11.0,28.0,20-60,Blockchain & web3 projects
+Smart Contract Developer,Emerging Tech,4.0,12.0,30.0,20-60,"Solidity, audits"
+Quantum Computing Researcher,Emerging Tech,10.0,25.0,50.0,20-60,Niche high-skill research roles
+Robotics Engineer,Hardware & Robotics,4.5,12.0,30.0,25-60,Automation & robotics demand
+Embedded Systems Engineer,Hardware & IoT,3.5,9.0,22.0,15-45,IoT and device firmware roles
+IoT Engineer,Hardware & IoT,3.5,9.5,24.0,20-55,Edge computing and connected devices
+Firmware Engineer,Hardware & IoT,3.5,9.0,22.0,15-45,Low-level device software
+VLSI / Chip Design Engineer,Hardware & IC,4.0,11.0,30.0,15-45,Semiconductor design roles
+FPGA Engineer,Hardware & IC,4.5,11.0,28.0,15-45,Hardware acceleration
+Hardware Design Engineer,Hardware & IC,3.5,9.0,22.0,10-35,"PCB, circuits"
+Game Developer,Software Development,3.0,8.0,25.0,10-40,"Game engines, studios"
+Graphics / Shader Programmer,Software Development,4.0,12.0,30.0,15-45,Specialized graphics work
+AR/VR Developer,Emerging Tech,3.5,10.0,26.0,20-60,Immersive experiences
+Full Stack Mobile Engineer,Software Development,4.0,11.0,26.0,15-45,Cross-platform mobile stacks
+Android Performance Engineer,Software Development,4.0,11.0,26.0,15-40,Optimization specialists
+iOS Performance Engineer,Software Development,4.0,11.0,26.0,15-40,iOS optimization
+Game Engine Engineer,Software Development,6.0,15.0,35.0,15-50,Core engine dev
+Backend Java Developer,Software Development,3.5,9.0,24.0,10-35,Enterprise backend roles
+.NET Developer,Software Development,3.0,8.0,20.0,5-25,Enterprise app dev
+PHP Developer,Software Development,2.5,6.5,15.0,0-10,Legacy web stacks
+Python Developer,Software Development,3.5,9.5,24.0,10-40,Versatile language demand
+Go / Rust Developer,Software Development,4.0,11.0,28.0,15-50,Systems & performance-focused roles
+Database Administrator (DBA),Data & Infra,3.5,8.5,20.0,5-25,RDBMS & NoSQL ops
+Data Architect,Data & ML,8.0,18.0,38.0,25-60,Data platform design
+ETL Developer,Data & ML,3.0,8.0,20.0,10-35,Data pipelines
+BI Architect,Data & Analytics,6.0,14.0,30.0,10-40,BI tooling & dashboards
+Business Intelligence Analyst,Data & Analytics,3.0,8.0,18.0,10-35,Reporting roles
+Analytics Manager,Data & Analytics,6.0,16.0,32.0,15-45,Team leadership in analytics
+Product Manager - Tech,Product,5.0,15.0,35.0,15-45,Product leadership
+Associate Product Manager,Product,2.5,7.0,15.0,10-35,Entry PM pathways
+Principal Product Manager,Product,12.0,25.0,45.0,10-30,Senior strategic PM
+Technical Program Manager (TPM),Product/PM,6.0,16.0,36.0,15-40,Cross-functional program leadership
+Project Manager - IT,Product/PM,4.0,11.0,28.0,5-25,Delivery roles
+Scrum Master,Agile,3.5,9.0,20.0,5-25,Agile facilitation
+QA Engineer / Tester,Quality Assurance,2.5,6.0,15.0,0-20,Manual testing
+Test Automation Engineer,Quality Assurance,3.5,9.0,22.0,10-35,Automation demand
+Quality Lead / Manager,Quality Assurance,6.0,14.0,30.0,5-25,QA leadership
+Performance Test Engineer,Quality Assurance,4.0,10.0,24.0,10-35,Load & performance testing
+Release Engineer,DevOps/Infra,4.0,10.0,24.0,10-35,Build & release pipelines
+Build Engineer,DevOps/Infra,3.5,9.0,22.0,10-30,CI tooling experts
+API Developer / Integration Engineer,Software Development,3.5,9.5,24.0,10-40,APIs & integrations
+Platform Engineer,Cloud & Infra,5.0,14.0,32.0,20-60,Platform teams for scale
+Solutions Architect,Architecture,7.0,18.0,40.0,15-50,Client-facing architecture
+Pre-Sales Engineer / Solutions Engineer,Sales/Tech,4.0,12.0,28.0,10-35,Technical sales support
+Salesforce Developer,Enterprise Apps,3.5,10.0,24.0,10-35,CRM platform dev
+SAP Consultant (Tech),Enterprise Apps,4.0,12.0,30.0,5-20,ERP specialization
+ERP Developer,Enterprise Apps,3.5,9.5,24.0,5-20,ERP dev
+CRM Developer,Enterprise Apps,3.0,8.5,20.0,5-25,CRM customizations
+Technical Support Engineer / L1-L3,Support,2.5,6.5,16.0,0-20,Customer-facing tech support
+IT Helpdesk,Support,1.8,4.0,9.0,0-10,Entry-level support
+IT Manager,Management,6.0,16.0,32.0,5-25,Operations leadership
+Director of Engineering,Management,20.0,40.0,75.0,5-20,Senior exec
+Chief Technology Officer (CTO),Executive,40.0,80.0,200.0,5-15,C-suite compensation varies widely
+Technical Writer / Documentation,Other Tech,2.5,6.5,14.0,0-15,Docs & API writing
+DevSecOps Engineer,Cybersecurity/DevOps,4.5,12.0,28.0,30-75,Security in deployment
+Observability Engineer,Cloud & Infra,5.0,13.0,30.0,20-60,Monitoring & telemetry
+Edge Computing Engineer,Cloud & Infra,4.0,11.0,26.0,20-55,Edge & latency-sensitive apps
+AI Product Manager,Product/AI,6.0,16.0,36.0,30-80,PM for AI products
+Search Engineer / Relevance Engineer,Data & ML,4.5,12.0,28.0,20-55,Search and ranking systems
+Recommendation Systems Engineer,Data & ML,5.0,13.0,30.0,25-60,Personalization systems
+Localization Engineer,Software Dev,2.5,6.5,16.0,5-20,Internationalization & i18n
+Accessibility Engineer,Software Dev,3.0,8.0,18.0,10-30,A11y compliance
+Middleware Engineer,Software/Infra,3.5,9.5,22.0,10-30,Enterprise middleware
+Integration Architect,Architecture,8.0,18.0,38.0,10-40,Complex system integrations
+Compliance Engineer (Tech),Security/Legal,4.0,11.0,26.0,10-35,Regulatory compliance for tech
+Localization PM,Product/PM,3.0,8.5,20.0,5-25,Manage localization efforts
+Hardware Validation Engineer,Hardware,3.5,9.0,22.0,10-35,Testing hardware products
+Chip Verification Engineer (SoC),Hardware/IC,5.0,14.0,32.0,10-35,Verification for chips
+BI Consultant,Data & Analytics,4.5,12.0,28.0,10-40,BI advisory roles
+Cloud Cost Optimization Specialist,Cloud,4.5,12.0,28.0,15-45,FinOps and cloud cost control
+Mobile QA Engineer,QA/Mobile,3.0,7.5,18.0,10-35,Mobile testing
+Observability SRE,Cloud & Infra,5.0,13.0,30.0,20-50,SRE focused on observability
